@@ -1,4 +1,4 @@
-name: Deploy React App (Vite) to Azure Static Web Apps
+name: Deploy React App to Azure Static Web Apps
 
 on:
   push:
@@ -7,41 +7,46 @@ on:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
-
+    env:
+      AZURE_STATIC_WEB_APPS_API_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+      VITE_USERS_API_URL: ${{ secrets.VITE_USERS_API_URL }}
+      VITE_PRODUCTS_API_URL: ${{ secrets.VITE_PRODUCTS_API_URL }}
+      VITE_SALES_API_URL: ${{ secrets.VITE_SALES_API_URL }}
+      VITE_REFUNDS_API_URL: ${{ secrets.VITE_REFUNDS_API_URL }}
+      VITE_PRODUCTION: 'true'
+    
     steps:
-      # 1️⃣ Clona el repo
       - uses: actions/checkout@v4
-
-      # 2️⃣ Configura Node.js
+        
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-
-      # 3️⃣ Limpia cualquier caché de npm (por si hay conflicto con vite)
-      - name: Clean npm cache
-        run: npm cache clean --force
-
-      # 4️⃣ Instala dependencias
-      - name: Install dependencies
-        run: npm install
-
-      # 5️⃣ Compila tu app usando Vite desde node_modules
-      - name: Build React app (Vite)
-        run: npx vite build
-        env:
-          VITE_USERS_API_URL: ${{ secrets.VITE_USERS_API_URL }}
-          VITE_PRODUCTS_API_URL: ${{ secrets.VITE_PRODUCTS_API_URL }}
-          VITE_SALES_API_URL: ${{ secrets.VITE_SALES_API_URL }}
-          VITE_REFUNDS_API_URL: ${{ secrets.VITE_REFUNDS_API_URL }}
-          VITE_PRODUCTION: 'true'
-
-      # 6️⃣ Sube el resultado (dist) a tu Azure Static Web App
-      - name: Deploy to Azure Static Web Apps
+          
+      - name: Install dependencies with clean approach
+        run: |
+          # Enfoque completamente limpio
+          npm config set scripts-prepend-node-path true
+          npm install --scripts-prepend-node-path
+          
+      - name: Build using direct node execution
+        run: |
+          # Ejecutar vite directamente con node
+          node node_modules/vite/bin/vite.js build
+          
+      - name: Verify build
+        run: |
+          echo "✅ Build completado - Archivos en dist/:"
+          ls -la dist/
+          echo "=== Estructura ==="
+          find dist/ -type f | head -10
+          
+      - name: Deploy to Azure
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           action: "upload"
-          app_location: "dist"
+          app_location: "./"
+          output_location: "dist"
           skip_app_build: true
