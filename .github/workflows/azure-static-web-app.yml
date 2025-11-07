@@ -33,6 +33,16 @@ jobs:
             echo "=== Contenido de index.html ==="
             cat dist/index.html | head -10
             
+      - name: Debug - Check deployed files
+        run: |
+          echo "=== Archivos en dist/ ==="
+          find dist/ -type f
+          echo "=== Contenido de index.html ==="
+          cat dist/index.html
+          echo "=== Estructura de dist/assets ==="
+          ls -la dist/assets/      
+
+          
       - name: Verify build files exist
         run: |
           echo "=== Verificando que los archivos se generaron ==="
