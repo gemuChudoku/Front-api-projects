@@ -42,7 +42,24 @@ jobs:
           echo "=== Estructura de dist/assets ==="
           ls -la dist/assets/      
 
-          
+      - name: Build with Docker
+        run: |
+          docker run --rm \
+            -v $(pwd):/app \
+            -w /app \
+            node:18-alpine \
+            /bin/sh -c "
+              npm install &&
+              npx vite build
+            "
+            
+      - name: Verify relative paths
+        run: |
+          echo "=== Verificando rutas en index.html ==="
+          cat dist/index.html | grep -E '(src|href)='
+          echo "=== Debería mostrar ./assets/ en lugar de /assets/ ==="
+
+
       - name: Verify build files exist
         run: |
           echo "=== Verificando que los archivos se generaron ==="
