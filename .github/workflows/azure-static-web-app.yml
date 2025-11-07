@@ -1,4 +1,4 @@
-name: Deploy React App to Azure Static Web Apps
+name: Deploy React App (Vite) to Azure Static Web Apps
 
 on:
   push:
@@ -7,30 +7,37 @@ on:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
+      # 1️⃣ Clona el repo
       - uses: actions/checkout@v4
-        
+
+      # 2️⃣ Configura Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-          
+
+      # 3️⃣ Limpia cualquier caché de npm (por si hay conflicto con vite)
+      - name: Clean npm cache
+        run: npm cache clean --force
+
+      # 4️⃣ Instala dependencias
       - name: Install dependencies
-        run: |
-          npm install
-          
-      - name: Build React app
-        run: |
-          npm run build
+        run: npm install
+
+      # 5️⃣ Compila tu app usando Vite desde node_modules
+      - name: Build React app (Vite)
+        run: npx vite build
         env:
           VITE_USERS_API_URL: ${{ secrets.VITE_USERS_API_URL }}
           VITE_PRODUCTS_API_URL: ${{ secrets.VITE_PRODUCTS_API_URL }}
           VITE_SALES_API_URL: ${{ secrets.VITE_SALES_API_URL }}
           VITE_REFUNDS_API_URL: ${{ secrets.VITE_REFUNDS_API_URL }}
           VITE_PRODUCTION: 'true'
-          
+
+      # 6️⃣ Sube el resultado (dist) a tu Azure Static Web App
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
         with:
