@@ -7,71 +7,42 @@ on:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
-    env:
-      AZURE_STATIC_WEB_APPS_API_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-      VITE_USERS_API_URL: ${{ secrets.VITE_USERS_API_URL }}
-      VITE_PRODUCTS_API_URL: ${{ secrets.VITE_PRODUCTS_API_URL }}
-      VITE_SALES_API_URL: ${{ secrets.VITE_SALES_API_URL }}
-      VITE_REFUNDS_API_URL: ${{ secrets.VITE_REFUNDS_API_URL }}
-      VITE_PRODUCTION: 'true'
     
     steps:
       - uses: actions/checkout@v4
         
-      - name: Build using Docker
-        uses: addnab/docker-run-action@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          image: node:18-alpine
-          options: -v ${{ github.workspace }}:/app -w /app
-          run: |
-            echo "=== Instalando dependencias ==="
-            npm install
-            echo "=== Realizando build ==="
-            npx vite build
-            echo "=== Verificando archivos ==="
-            ls -la dist/
-            echo "=== Contenido de index.html ==="
-            cat dist/index.html | head -10
-            
-      - name: Debug - Check deployed files
-        run: |
-          echo "=== Archivos en dist/ ==="
-          find dist/ -type f
-          echo "=== Contenido de index.html ==="
-          cat dist/index.html
-          echo "=== Estructura de dist/assets ==="
-          ls -la dist/assets/      
-
-      - name: Build with Docker
-        run: |
-          docker run --rm \
-            -v $(pwd):/app \
-            -w /app \
-            node:18-alpine \
-            /bin/sh -c "
-              npm install &&
-              npx vite build
-            "
-            
-      - name: Verify relative paths
-        run: |
-          echo "=== Verificando rutas en index.html ==="
-          cat dist/index.html | grep -E '(src|href)='
-          echo "=== Debería mostrar ./assets/ en lugar de /assets/ ==="
-
-
-      - name: Verify build files exist
-        run: |
-          echo "=== Verificando que los archivos se generaron ==="
-          ls -la dist/
-          if [ -f "dist/index.html" ]; then
-            echo "✅ index.html existe"
-          else
-            echo "❌ index.html NO existe"
-            exit 1
-          fi
+          node-version: '18'
+          cache: 'npm'
           
-      - name: Deploy to Azure Static Web Apps
+      - name: Install dependencies
+        run: |
+          # Instalar Vite globalmente para evitar problemas de permisos
+          npm install -g vite @vitejs/plugin-react
+          npm install
+          
+      - name: Build React app
+        run: |
+          # Usar Vite globalmente instalado
+          vite build
+        env:
+          VITE_USERS_API_URL: ${{ secrets.VITE_USERS_API_URL }}
+          VITE_PRODUCTS_API_URL: ${{ secrets.VITE_PRODUCTS_API_URL }}
+          VITE_SALES_API_URL: ${{ secrets.VITE_SALES_API_URL }}
+          VITE_REFUNDS_API_URL: ${{ secrets.VITE_REFUNDS_API_URL }}
+          VITE_PRODUCTION: 'true'
+          
+      - name: Verify build for Azure
+        run: |
+          echo "=== INDEX.HTML GENERADO ==="
+          cat dist/index.html
+          echo "=== RUTAS (deben ser relativas) ==="
+          grep -E 'src="[^"]*"' dist/index.html
+          grep -E 'href="[^"]*"' dist/index.html
+          
+      - name: Deploy to Azure
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
